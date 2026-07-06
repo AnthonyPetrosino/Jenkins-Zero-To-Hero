@@ -61,7 +61,7 @@ pipeline {
                     git config --global --add safe.directory $WORKSPACE
                     git config user.email "apetrosino789@gmail.com"
                     git config user.name "AnthonyPetrosino"
-                    sed -i "s|apetrosino789/ultimate-cicd:[0-9]*|apetrosino789/ultimate-cicd:${BUILD_NUMBER}|g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                    sed -i "s|apetrosino789/ultimate-cicd:.*|apetrosino789/ultimate-cicd:${BUILD_NUMBER}|g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
                     git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
                     git commit -m "Update deployment image to version ${BUILD_NUMBER}"
                     git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main

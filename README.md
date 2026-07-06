@@ -29,9 +29,11 @@ Pre-Requisites:
 
 Install Java
 
+**Note:** Jenkins now requires Java 21+. Install Java 21:
+
 ```
 sudo apt update
-sudo apt install openjdk-17-jre
+sudo apt install openjdk-21-jre -y
 ```
 
 Verify Java is Installed
@@ -42,14 +44,45 @@ java -version
 
 Now, you can proceed with installing Jenkins
 
+**Note:** The `jenkins.io-2023.key` is outdated. Use the following commands to fetch the current signing key and install Jenkins.
+
 ```
-curl -fsSL https://pkg.jenkins.io/debian/jenkins.io-2023.key | sudo tee \
-  /usr/share/keyrings/jenkins-keyring.asc > /dev/null
-echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
-  https://pkg.jenkins.io/debian binary/ | sudo tee \
+sudo gpg --keyserver keyserver.ubuntu.com --recv-keys 7198F4B714ABFC68
+sudo gpg --export 7198F4B714ABFC68 | sudo tee /usr/share/keyrings/jenkins-keyring.gpg > /dev/null
+
+echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.gpg] \
+  https://pkg.jenkins.io/debian-stable binary/" | sudo tee \
   /etc/apt/sources.list.d/jenkins.list > /dev/null
+
 sudo apt-get update
-sudo apt-get install jenkins
+sudo apt-get install jenkins -y
+```
+
+**Troubleshooting:** If `apt-get install jenkins` fails due to an unsupported Ubuntu version (e.g. 24.10+), install Jenkins directly via the `.war` file instead:
+
+```
+wget https://get.jenkins.io/war-stable/latest/jenkins.war
+java -jar jenkins.war --httpPort=8080
+```
+
+**Troubleshooting:** If Jenkins fails to start with `Running with Java 17... Supported Java versions are: [21, 25]`, force Java 21 by overriding the service:
+
+```
+sudo systemctl edit jenkins
+```
+
+Add the following and save:
+
+```
+[Service]
+Environment="JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64"
+```
+
+Then reload and start:
+
+```
+sudo systemctl daemon-reload
+sudo systemctl start jenkins
 ```
 
 **Note: ** By default, Jenkins will not be accessible to the external world due to the inbound traffic restriction by AWS. Open port 8080 in the inbound traffic rules as show below.
@@ -131,6 +164,71 @@ http://<ec2-instance-public-ip>:8080/restart
 
 The docker agent configuration is now successful.
 
+## SonarQube Installation
 
+**Pre-Requisites:**
+- EC2 instance with at least 12GB disk and 4GB RAM
+- Java 21 (already installed for Jenkins)
+- A dedicated `sonarqube` user
 
+### Setup
+
+```
+sudo apt update && sudo apt install unzip -y
+sudo adduser sonarqube
+wget https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-10.6.0.92116.zip
+sudo unzip sonarqube-10.6.0.92116.zip -d /opt/
+sudo mv /opt/sonarqube-10.6.0.92116 /opt/sonarqube
+sudo chown -R sonarqube:sonarqube /opt/sonarqube
+sudo chmod -R 775 /opt/sonarqube
+```
+
+### Start SonarQube
+
+```
+sudo su - sonarqube
+cd /opt/sonarqube/bin/linux-x86-64
+./sonar.sh start
+./sonar.sh status
+```
+
+### Access SonarQube
+
+Open port 9000 in your EC2 security group inbound rules, then navigate to:
+
+```
+http://<ec2-instance-public-ip>:9000
+```
+
+Default credentials: `admin` / `admin`
+
+**Note:** Use SonarQube 10.6+ — earlier versions (e.g. 10.4.1) are incompatible with Java 21 due to removal of the Java Security Manager.
+
+## Pipeline Troubleshooting
+
+### Docker Agent: Java Version
+
+The original pipeline used `abhishekf5/maven-abhishek-docker-agent:v1` which ships with Java 11. SonarQube 10.6 downloads a scanner bootstrap jar compiled with Java 17 (class file version 61), causing:
+
+```
+UnsupportedClassVersionError: class file version 61.0, this version only recognizes up to 55.0
+```
+
+The Jenkinsfile has been updated to use the official `maven:3.9-eclipse-temurin-17` image instead, which is multi-arch (amd64/arm64) and includes Java 17.
+
+### Permission Denied on Checkout
+
+The Docker agent runs as `root`, so build artifacts in `target/` are owned by root. On subsequent runs, the `jenkins` user cannot remove them during git checkout:
+
+```
+error: unable to unlink old '...target/spring-boot-web.jar': Permission denied
+```
+
+The Checkout stage now cleans `target/` at the start of each run:
+
+```groovy
+sh 'rm -rf java-maven-sonar-argocd-helm-k8s/spring-boot-app/target || true'
+```
+
+**Note:** Do not use `sudo` in pipeline steps — the Docker agent container does not have it installed.
 
