@@ -9,7 +9,7 @@ pipeline {
     stage('Checkout') {
       steps {
         sh 'echo passed'
-        sh 'sudo rm -rf /var/lib/jenkins/workspace/Pipeline/java-maven-sonar-argocd-helm-k8s/spring-boot-app/target'
+        sh 'rm -rf java-maven-sonar-argocd-helm-k8s/spring-boot-app/target || true'
         //git branch: 'main', url: 'https://github.com/iam-veeramalla/Jenkins-Zero-To-Hero.git'
       }
     }
