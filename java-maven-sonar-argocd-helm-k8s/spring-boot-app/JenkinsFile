@@ -55,7 +55,7 @@ pipeline {
             GIT_USER_NAME = "AnthonyPetrosino"
         }
         steps {
-            withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
+            withCredentials([string(credentialsId: 'jenkins-demo', variable: 'GITHUB_TOKEN')]) {
                 sh '''
                     cd $WORKSPACE
                     git config --global --add safe.directory $WORKSPACE
