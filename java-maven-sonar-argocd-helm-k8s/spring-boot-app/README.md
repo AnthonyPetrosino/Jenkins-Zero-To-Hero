@@ -57,14 +57,15 @@ Java 17+ (Oracle JDK, OpenJDK, or AdoptOpenJDK)
 Hardware Recommendations:
    Minimum 2 GB RAM
    2 CPU cores
-sudo apt update && sudo apt install unzip -y
-adduser sonarqube
-wget https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-10.4.1.88267.zip
-unzip *
-chown -R sonarqube:sonarqube /opt/sonarqube
-chmod -R 775 /opt/sonarqube
+wget https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-10.6.0.92116.zip
+sudo unzip sonarqube-10.6.0.92116.zip -d /opt/
+sudo mv /opt/sonarqube-10.6.0.92116 /opt/sonarqube
+sudo chown -R sonarqube:sonarqube /opt/sonarqube
+sudo chmod -R 775 /opt/sonarqube
+sudo su - sonarqube
 cd /opt/sonarqube/bin/linux-x86-64
 ./sonar.sh start
+./sonar.sh status
 ```
 
 Hurray !! Now you can access the `SonarQube Server` on `http://<ip-address>:9000` 
